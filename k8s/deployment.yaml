@@ -1,0 +1,114 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: watchdog-backend
+  namespace: monitoring
+  labels:
+    app: watchdog-backend
+    component: watchdog
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: watchdog-backend
+  template:
+    metadata:
+      labels:
+        app: watchdog-backend
+        component: watchdog
+    spec:
+      serviceAccountName: watchdog-sa
+      containers:
+        - name: watchdog-backend
+          image: watchdog/backend:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+              name: http
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: watchdog-secrets
+                  key: database-url
+            - name: DATABASE_USER
+              valueFrom:
+                secretKeyRef:
+                  name: watchdog-secrets
+                  key: database-user
+            - name: DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: watchdog-secrets
+                  key: database-password
+            - name: REDIS_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: watchdog-config
+                  key: redis-host
+            - name: KAFKA_BROKERS
+              valueFrom:
+                configMapKeyRef:
+                  name: watchdog-config
+                  key: kafka-brokers
+            - name: SLACK_WEBHOOK_URL
+              valueFrom:
+                secretKeyRef:
+                  name: watchdog-secrets
+                  key: slack-webhook-url
+            - name: PAGERDUTY_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: watchdog-secrets
+                  key: pagerduty-key
+            - name: REMEDIATION_DRY_RUN
+              value: "false"
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 30
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "512Mi"
+            limits:
+              cpu: "2000m"
+              memory: "2Gi"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: watchdog-frontend
+  namespace: monitoring
+  labels:
+    app: watchdog-frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: watchdog-frontend
+  template:
+    metadata:
+      labels:
+        app: watchdog-frontend
+    spec:
+      containers:
+        - name: watchdog-frontend
+          image: watchdog/frontend:latest
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
