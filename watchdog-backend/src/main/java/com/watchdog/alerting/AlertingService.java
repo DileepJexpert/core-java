@@ -23,6 +23,7 @@ public class AlertingService {
     private final EmailNotifier emailNotifier;
     private final PagerDutyNotifier pagerDutyNotifier;
     private final OpsGenieNotifier opsGenieNotifier;
+    private final TeamsNotifier teamsNotifier;
 
     public void alert(IncidentEntity incident) {
         Severity severity = incident.getSeverity();
@@ -42,6 +43,7 @@ public class AlertingService {
 
     private void alertP1(IncidentEntity incident) {
         slackNotifier.sendCritical(incident);
+        teamsNotifier.sendCritical(incident);
         emailNotifier.sendAlert(incident);
         pagerDutyNotifier.triggerIncident(incident);
         // OpsGenie as backup paging
@@ -50,11 +52,13 @@ public class AlertingService {
 
     private void alertP2(IncidentEntity incident) {
         slackNotifier.sendHigh(incident);
+        teamsNotifier.sendHigh(incident);
         emailNotifier.sendAlert(incident);
     }
 
     private void alertP3(IncidentEntity incident) {
         slackNotifier.sendMedium(incident);
+        teamsNotifier.sendMedium(incident);
     }
 
     /**
@@ -62,6 +66,7 @@ public class AlertingService {
      */
     public void alertResolved(IncidentEntity incident) {
         slackNotifier.sendResolved(incident);
+        teamsNotifier.sendResolved(incident);
         if (incident.getSeverity() == Severity.P1_CRITICAL) {
             pagerDutyNotifier.resolveIncident(incident);
             opsGenieNotifier.closeAlert(incident);

@@ -179,6 +179,61 @@ public class ElasticsearchConnector {
         return counts;
     }
 
+    /**
+     * Fetches the most recent error stack trace for a service from Elasticsearch.
+     * Returns the top {@code maxLines} lines, or an empty string if none found or on error.
+     */
+    public String fetchLatestStackTrace(String serviceName, int maxLines) {
+        String indexPattern = properties.getElasticsearch().getIndexPattern();
+        String query = """
+                {
+                  "query": {
+                    "bool": {
+                      "must": [
+                        {"term":  {"log.level": "ERROR"}},
+                        {"term":  {"service.name.keyword": "%s"}},
+                        {"exists": {"field": "error.stack_trace"}}
+                      ]
+                    }
+                  },
+                  "size": 1,
+                  "sort": [{"@timestamp": {"order": "desc"}}],
+                  "_source": ["error.stack_trace", "message"]
+                }
+                """.formatted(serviceName);
+
+        try {
+            JsonNode response = elasticsearchWebClient.post()
+                    .uri("/" + indexPattern + "/_search")
+                    .header("Content-Type", "application/json")
+                    .bodyValue(query)
+                    .retrieve()
+                    .bodyToMono(JsonNode.class)
+                    .block();
+
+            if (response == null) return "";
+            JsonNode hits = response.path("hits").path("hits");
+            if (!hits.isArray() || hits.isEmpty()) return "";
+
+            JsonNode source = hits.get(0).path("_source");
+            String stackTrace = source.path("error").path("stack_trace").asText("");
+            if (stackTrace.isBlank()) {
+                stackTrace = source.path("message").asText("");
+            }
+
+            String[] lines = stackTrace.split("\n");
+            int limit = Math.min(maxLines, lines.length);
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < limit; i++) {
+                sb.append(lines[i]).append("\n");
+            }
+            return sb.toString().trim();
+        } catch (Exception e) {
+            log.debug("Could not fetch stack trace for {}: {}", serviceName, e.getMessage());
+            return "";
+        }
+    }
+
     private Severity mapLogLevelToSeverity(String level) {
         return switch (level.toUpperCase()) {
             case "FATAL", "ERROR" -> Severity.P2_HIGH;
