@@ -4,7 +4,9 @@ import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Data
 @ConfigurationProperties(prefix = "watchdog")
@@ -68,6 +70,7 @@ public class WatchdogProperties {
         private SlackConfig slack = new SlackConfig();
         private PagerDutyConfig pagerduty = new PagerDutyConfig();
         private OpsGenieConfig opsgenie = new OpsGenieConfig();
+        private TeamsConfig teams = new TeamsConfig();
 
         @Data
         public static class SlackConfig {
@@ -85,6 +88,15 @@ public class WatchdogProperties {
         public static class OpsGenieConfig {
             private String apiKey = "";
             private String alertsUrl = "https://api.opsgenie.com/v2/alerts";
+        }
+
+        @Data
+        public static class TeamsConfig {
+            private String defaultWebhookUrl = "";
+            private Map<String, String> channelMap = new HashMap<>();
+            private String kibanaBaseUrl = "http://localhost:5601";
+            private String grafanaBaseUrl = "http://localhost:3000";
+            private String jaegerBaseUrl = "http://localhost:16686";
         }
     }
 

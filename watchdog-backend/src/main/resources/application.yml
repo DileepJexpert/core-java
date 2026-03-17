@@ -120,6 +120,18 @@ watchdog:
     opsgenie:
       api-key: ${OPSGENIE_KEY:}
       alerts-url: https://api.opsgenie.com/v2/alerts
+    teams:
+      # Default Teams channel for all services without a specific mapping
+      default-webhook-url: ${TEAMS_WEBHOOK_URL:}
+      # Per-service webhook routing — map service name to its team's channel URL
+      # Uncomment and set env vars for each service's team channel:
+      # channel-map:
+      #   payment-service: ${TEAMS_WEBHOOK_PAYMENT:}
+      #   auth-service: ${TEAMS_WEBHOOK_AUTH:}
+      #   order-service: ${TEAMS_WEBHOOK_ORDERS:}
+      kibana-base-url: ${KIBANA_URL:http://localhost:5601}
+      grafana-base-url: ${GRAFANA_URL:http://localhost:3000}
+      jaeger-base-url: ${JAEGER_URL:http://localhost:16686}
 
   remediation:
     dry-run: ${REMEDIATION_DRY_RUN:true}
