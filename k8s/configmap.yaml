@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: watchdog-config
+  namespace: monitoring
+data:
+  redis-host: "redis-master.monitoring.svc.cluster.local"
+  kafka-brokers: "kafka-headless.monitoring.svc.cluster.local:9092"
+  es-url: "http://elasticsearch-master.monitoring.svc.cluster.local:9200"
+  jaeger-url: "http://jaeger-query.monitoring.svc.cluster.local:16686"
+  grafana-url: "http://grafana.monitoring.svc.cluster.local:3000"
+  remediation-dry-run: "false"
+  correlation-window-minutes: "5"
+  slow-trace-threshold-ms: "2000"
+---
+# Secrets template (replace values before applying)
+apiVersion: v1
+kind: Secret
+metadata:
+  name: watchdog-secrets
+  namespace: monitoring
+type: Opaque
+stringData:
+  database-url: "jdbc:postgresql://postgres.monitoring.svc.cluster.local:5432/watchdog"
+  database-user: "watchdog"
+  database-password: "REPLACE_WITH_ACTUAL_PASSWORD"
+  slack-webhook-url: "REPLACE_WITH_SLACK_WEBHOOK"
+  pagerduty-key: "REPLACE_WITH_PAGERDUTY_KEY"
+  opsgenie-key: "REPLACE_WITH_OPSGENIE_KEY"
+  grafana-api-key: "REPLACE_WITH_GRAFANA_API_KEY"

@@ -1,0 +1,62 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: watchdog-backend
+  namespace: monitoring
+  labels:
+    app: watchdog-backend
+spec:
+  selector:
+    app: watchdog-backend
+  ports:
+    - port: 8080
+      targetPort: 8080
+      name: http
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: watchdog-frontend
+  namespace: monitoring
+  labels:
+    app: watchdog-frontend
+spec:
+  selector:
+    app: watchdog-frontend
+  ports:
+    - port: 80
+      targetPort: 80
+  type: LoadBalancer
+---
+# RBAC: ServiceAccount for K8s auto-remediation operations
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: watchdog-sa
+  namespace: monitoring
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: watchdog-remediation-role
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments", "replicasets"]
+    verbs: ["get", "list", "watch", "update", "patch"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: watchdog-remediation-binding
+subjects:
+  - kind: ServiceAccount
+    name: watchdog-sa
+    namespace: monitoring
+roleRef:
+  kind: ClusterRole
+  name: watchdog-remediation-role
+  apiGroup: rbac.authorization.k8s.io

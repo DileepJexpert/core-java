@@ -1,0 +1,135 @@
+spring:
+  application:
+    name: watchdog
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/watchdog}
+    username: ${DATABASE_USER:watchdog}
+    password: ${DATABASE_PASSWORD:watchdog}
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 30000
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        jdbc:
+          lob:
+            non_contextual_creation: true
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 5000ms
+      lettuce:
+        pool:
+          max-active: 16
+          max-idle: 8
+  kafka:
+    bootstrap-servers: ${KAFKA_BROKERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        spring.json.add.type.headers: false
+    consumer:
+      group-id: watchdog-correlation
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: com.watchdog.model
+        spring.json.value.default.type: com.watchdog.model.NormalizedEvent
+      auto-offset-reset: latest
+  mail:
+    host: ${SMTP_HOST:smtp.gmail.com}
+    port: ${SMTP_PORT:587}
+    username: ${SMTP_USER:}
+    password: ${SMTP_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+server:
+  port: ${SERVER_PORT:8080}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    com.watchdog: INFO
+    org.springframework.kafka: WARN
+    io.fabric8: WARN
+
+# WATCHDOG platform configuration
+watchdog:
+  elasticsearch:
+    url: ${ES_URL:http://localhost:9200}
+    index-pattern: "logs-*"
+    poll-interval-seconds: 30
+    username: ${ES_USER:}
+    password: ${ES_PASSWORD:}
+
+  jaeger:
+    url: ${JAEGER_URL:http://localhost:16686}
+    slow-trace-threshold-ms: 2000
+    poll-interval-seconds: 60
+
+  grafana:
+    url: ${GRAFANA_URL:http://localhost:3000}
+    api-key: ${GRAFANA_API_KEY:}
+    poll-interval-seconds: 15
+
+  health-probe:
+    interval-seconds: 10
+    timeout-seconds: 5
+    targets:
+      # Add monitored services here
+      # - name: payment-service
+      #   url: http://payment-service/actuator/health
+      #   type: HTTP
+
+  correlation:
+    window-minutes: 5
+    min-signals-for-correlation: 2
+
+  alerting:
+    slack:
+      webhook-url: ${SLACK_WEBHOOK_URL:}
+      channel: "#watchdog-alerts"
+    pagerduty:
+      integration-key: ${PAGERDUTY_KEY:}
+      events-url: https://events.pagerduty.com/v2/enqueue
+    opsgenie:
+      api-key: ${OPSGENIE_KEY:}
+      alerts-url: https://api.opsgenie.com/v2/alerts
+
+  remediation:
+    dry-run: ${REMEDIATION_DRY_RUN:true}
+    max-scale-factor: 2.0
+    restart-cooldown-minutes: 20
+    max-restarts-per-hour: 3
+    circuit-breaker-retry-minutes: 5
+    max-circuit-breaker-cycles: 3
+
+  anomaly:
+    z-score-threshold: 3.0
+    retraining-interval-hours: 24
+    min-samples-for-detection: 30
